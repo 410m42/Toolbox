@@ -2893,18 +2893,32 @@ fn icon_key(label: &str) -> &'static str {
     match label {
         "Audacity" | "audacity" => "audacity",
         "Bitwarden" | "bitwarden" | "com.bitwarden.desktop" => "bitwarden",
+        "Bottles" | "bottles" | "com.usebottles.bottles" => "bottles",
+        "Boxes" | "boxes" | "gnome-boxes" | "org.gnome.Boxes" => "boxes",
         "Brave Browser" | "brave" | "com.brave.Browser" => "brave",
         "Brave Origin" | "brave-origin" | "brave-origin-bin" => "brave-origin",
         "Discord" | "discord" | "com.discordapp.Discord" => "discord",
+        "Dolphin Emulator" | "dolphin-emu" | "org.DolphinEmu.dolphin-emu" => "dolphin-emu",
+        "Extension Manager"
+        | "extension-manager"
+        | "com.mattjakeman.ExtensionManager" => "extension-manager",
         "Firefox" | "firefox" => "firefox",
+        "Flatseal" | "flatseal" | "com.github.tchx84.Flatseal" => "flatseal",
+        "Gear Lever" | "gearlever" | "gear-lever" | "it.mijorus.gearlever" => "gear-lever",
         "GIMP" | "gimp" | "org.gimp.GIMP" => "gimp",
         "Google Chrome" | "google-chrome" | "com.google.Chrome" => "google-chrome",
+        "GParted" | "gparted" => "gparted",
         "Heroic" | "heroic" | "com.heroicgameslauncher.hgl" => "heroic",
         "htop" => "htop",
         "LibreOffice" | "libreoffice" => "libreoffice",
         "LibreWolf" | "librewolf" | "io.gitlab.librewolf-community" => "librewolf",
+        "LocalSend" | "localsend" | "org.localsend.localsend_app" => "localsend",
         "Lutris" | "lutris" | "net.lutris.Lutris" => "lutris",
         "Microsoft Edge" | "microsoft-edge" | "com.microsoft.Edge" => "microsoft-edge",
+        "Mission Center"
+        | "missioncenter"
+        | "mission-center"
+        | "io.missioncenter.MissionCenter" => "mission-center",
         "mpv" => "mpv",
         "Obsidian" | "obsidian" | "md.obsidian.Obsidian" => "obsidian",
         "OBS Studio" | "obs" | "obs-studio" | "com.obsproject.Studio" => "obs-studio",
@@ -2913,13 +2927,22 @@ fn icon_key(label: &str) -> &'static str {
         | "onlyoffice-desktopeditors"
         | "org.onlyoffice.desktopeditors" => "onlyoffice",
         "Opera" | "opera" | "com.opera.Opera" => "opera",
+        "PPSSPP" | "ppsspp" | "org.ppsspp.PPSSPP" => "ppsspp",
+        "Prism Launcher"
+        | "prismlauncher"
+        | "prism-launcher"
+        | "org.prismlauncher.PrismLauncher" => "prism-launcher",
         "Proton VPN" | "proton-vpn" | "protonvpn-app" | "com.protonvpn.www" => "proton-vpn",
+        "ProtonPlus" | "protonplus" | "com.vysp3r.ProtonPlus" => "protonplus",
+        "ProtonUp-Qt" | "protonup-qt" | "net.davidotek.pupgui2" => "protonup-qt",
         "PyCharm Community" | "pycharm-community" | "com.jetbrains.PyCharm-Community" => {
             "pycharm-community"
         }
         "qBittorrent" | "qbittorrent" => "qbittorrent",
+        "RetroArch" | "retroarch" | "org.libretro.RetroArch" => "retroarch",
         "Signal" | "signal" | "signal-desktop" | "org.signal.Signal" => "signal",
         "Slack" | "slack" | "com.slack.Slack" => "slack",
+        "Sober" | "sober" | "org.vinegarhq.Sober" => "sober",
         "Spotify" | "spotify" | "com.spotify.Client" => "spotify",
         "Steam" | "steam" | "com.valvesoftware.Steam" => "steam",
         "Stremio" | "stremio" | "com.stremio.Stremio" => "stremio",
@@ -3270,7 +3293,7 @@ mod tests {
     }
 
     #[test]
-    fn letter_fallback_labels_have_no_dashboardicons_key() {
+    fn catalog_labels_resolve_to_icon_keys() {
         for label in [
             "Bottles",
             "Boxes",
@@ -3287,12 +3310,19 @@ mod tests {
             "Gear Lever",
             "ProtonPlus",
             "Mission Center",
+            "Brave Origin",
+            "Brave Browser",
+            "Zen",
         ] {
-            assert_eq!(icon_key(label), "", "{label}");
+            assert_ne!(icon_key(label), "", "{label}");
         }
         assert_eq!(icon_key("Brave Origin"), "brave-origin");
         assert_eq!(icon_key("Brave Browser"), "brave");
         assert_eq!(icon_key("Zen"), "zen-browser");
+        assert_eq!(icon_key("ProtonPlus"), "protonplus");
+        assert_eq!(icon_key("com.vysp3r.ProtonPlus"), "protonplus");
+        assert_eq!(icon_key("LocalSend"), "localsend");
+        assert_eq!(icon_key("Mission Center"), "mission-center");
     }
 
     #[test]

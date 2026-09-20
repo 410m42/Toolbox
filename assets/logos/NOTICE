@@ -16,7 +16,6 @@ Files (native dashboardicons.com pages):
   firefox.svg
   gimp.svg
   google-chrome.svg
-  libreoffice.svg
   librewolf.svg
   microsoft-edge.svg
   obsidian.svg
@@ -39,16 +38,50 @@ Files (native dashboardicons.com pages):
 Simple Icons (CC0 1.0 Universal)
 https://github.com/simple-icons/simple-icons
 
-Canonical CDN listed by the Toolbox spec (cdn.simpleicons.org). The same
-SVG markup is vendored here so the GUI never hotlinks at runtime:
-  vlc.svg                 <- cdn.simpleicons.org/vlcmediaplayer
-  lutris.svg              <- cdn.simpleicons.org/lutris
-  heroic.svg              <- cdn.simpleicons.org/heroicgameslauncher
-  obs-studio.svg          <- cdn.simpleicons.org/obsstudio
-  mpv.svg                 <- cdn.simpleicons.org/mpv
-  htop.svg                <- cdn.simpleicons.org/htop
-  pycharm-community.svg   <- cdn.simpleicons.org/pycharm
+Previously used for monochrome tiles (VLC, Lutris, Heroic, OBS, mpv, htop,
+PyCharm). Those tiles now use Flathub / brand color icons below so app cards
+match the colorful Flathub artwork instead of a black silhouette.
 
 brave-origin.svg is Chris's lion artwork for Brave Origin. It is not a
 dashboard-icons or Simple Icons asset and must not be replaced with the
 orange Brave Browser mark.
+
+Flathub / upstream app icons
+----------------------------
+These tiles use each project's published app icon (the same artwork Flathub
+shows). Prefer official SVG from the app source; when Flathub only publishes
+PNG, wrap that PNG as a data-URI SVG:
+
+  bottles.svg            <- bottlesdevs/Bottles scalable app icon
+                            (Flathub: com.usebottles.bottles)
+  boxes.svg              <- Flathub PNG for org.gnome.Boxes
+  dolphin-emu.svg        <- dolphin-emu/dolphin Data/dolphin-emu.svg
+                            (Flathub: org.DolphinEmu.dolphin-emu)
+  extension-manager.svg  <- mjakeman/extension-manager app icon
+                            (Flathub: com.mattjakeman.ExtensionManager)
+  flatseal.svg           <- Flathub PNG for com.github.tchx84.Flatseal
+  gear-lever.svg         <- Flathub PNG for it.mijorus.gearlever
+  gparted.svg            <- GNOME gparted 48px app PNG as data-URI SVG
+  heroic.svg             <- Flathub PNG for com.heroicgameslauncher.hgl
+  htop.svg               <- htop-dev/htop htop.png as data-URI SVG
+  localsend.svg          <- localsend logo-512.png as data-URI SVG
+                            (Flathub: org.localsend.localsend_app)
+  libreoffice.svg        <- LibreOffice Writer app icon (colorful suite mark;
+                            official main icon is grayscale)
+                            from libreoffice-still hicolor scalable SVG
+  lutris.svg             <- Flathub PNG for net.lutris.Lutris
+  mission-center.svg     <- Flathub PNG for io.missioncenter.MissionCenter
+  mpv.svg                <- Flathub PNG for io.mpv.Mpv
+  obs-studio.svg         <- Flathub PNG for com.obsproject.Studio
+  ppsspp.svg             <- hrydgard/ppsspp icons/icon-512.svg
+                            (Flathub: org.ppsspp.PPSSPP)
+  prism-launcher.svg     <- PrismLauncher program_info app icon
+                            (Flathub: org.prismlauncher.PrismLauncher)
+  protonplus.svg         <- Vysp3r/ProtonPlus data/icons SVG
+                            (Flathub: com.vysp3r.ProtonPlus)
+  protonup-qt.svg        <- Flathub PNG for net.davidotek.pupgui2
+  pycharm-community.svg  <- Flathub PNG for com.jetbrains.PyCharm-Community
+  retroarch.svg          <- Flathub PNG for org.libretro.RetroArch
+  sober.svg              <- vinegarhq/sober sober.svg
+                            (Flathub: org.vinegarhq.Sober)
+  vlc.svg                <- Flathub PNG for org.videolan.VLC
