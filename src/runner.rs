@@ -13,7 +13,7 @@ use std::{
 };
 
 use crate::catalog::{Task, display_command, helper_path_is_under_base};
-use crate::system::{command_exists, detect_package_manager};
+use crate::system::{PackageManager, command_exists, detect_package_manager};
 use crate::validate::{
     is_flatpak_id, is_safe_script_name, redact_secret, validate_main_sh_argv,
     validate_package_name, zeroize_string,
@@ -190,12 +190,14 @@ pub fn tasks_need_privileges(tasks: &[Task]) -> bool {
         .any(|task| command_needs_privileges(&task.command))
 }
 
-pub fn flatpak_package_install_command(package_manager: &str) -> Result<Vec<String>, String> {
+pub fn flatpak_package_install_command(
+    package_manager: PackageManager,
+) -> Result<Vec<String>, String> {
     validate_package_name("flatpak").map_err(|error| error.to_string())?;
 
     let mut command = vec!["sudo".to_owned(), "-S".to_owned()];
     match package_manager {
-        "pacman" => command.extend([
+        PackageManager::Pacman => command.extend([
             "pacman".to_owned(),
             "-S".to_owned(),
             "--needed".to_owned(),
@@ -203,7 +205,7 @@ pub fn flatpak_package_install_command(package_manager: &str) -> Result<Vec<Stri
             "--".to_owned(),
             "flatpak".to_owned(),
         ]),
-        "apt-get" | "apt" => {
+        PackageManager::Apt => {
             if command_exists("nala") {
                 command.extend([
                     "nala".to_owned(),
@@ -222,17 +224,15 @@ pub fn flatpak_package_install_command(package_manager: &str) -> Result<Vec<Stri
                 ]);
             }
         }
-        "dnf" => command.extend([
+        PackageManager::Dnf => command.extend([
             "dnf".to_owned(),
             "install".to_owned(),
             "-y".to_owned(),
             "--".to_owned(),
             "flatpak".to_owned(),
         ]),
-        other => {
-            return Err(format!(
-                "Unsupported package manager for Flatpak bootstrap: {other}"
-            ));
+        PackageManager::Unknown => {
+            return Err("Unsupported package manager for Flatpak bootstrap: unknown".to_owned());
         }
     }
     Ok(command)
@@ -251,7 +251,7 @@ fn ensure_flatpak_package(password: &str, tx: &Sender<RunnerMessage>) -> Result<
     ));
 
     let package_manager = detect_package_manager();
-    let command = flatpak_package_install_command(&package_manager)?;
+    let command = flatpak_package_install_command(package_manager)?;
     let _ = tx.send(RunnerMessage::Log(format!(
         "Command: {}",
         display_command(&command)
@@ -608,7 +608,7 @@ mod tests {
 
     #[test]
     fn flatpak_bootstrap_argv_uses_sudo_s_and_validated_package() {
-        let pacman = flatpak_package_install_command("pacman").unwrap();
+        let pacman = flatpak_package_install_command(PackageManager::Pacman).unwrap();
         assert_eq!(
             pacman,
             [
@@ -623,18 +623,17 @@ mod tests {
             ]
         );
 
-        let apt = flatpak_package_install_command("apt-get").unwrap();
+        let apt = flatpak_package_install_command(PackageManager::Apt).unwrap();
         assert_eq!(apt[0], "sudo");
         assert_eq!(apt[1], "-S");
         assert!(apt.contains(&"flatpak".to_owned()));
         assert!(apt.contains(&"--".to_owned()));
         assert!(apt.contains(&"apt-get".to_owned()) || apt.contains(&"nala".to_owned()));
 
-        let dnf = flatpak_package_install_command("dnf").unwrap();
+        let dnf = flatpak_package_install_command(PackageManager::Dnf).unwrap();
         assert_eq!(dnf, ["sudo", "-S", "dnf", "install", "-y", "--", "flatpak"]);
 
-        assert!(flatpak_package_install_command("unknown").is_err());
-        assert!(flatpak_package_install_command("pacman;id").is_err());
+        assert!(flatpak_package_install_command(PackageManager::Unknown).is_err());
     }
 
     #[test]

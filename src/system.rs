@@ -32,13 +32,47 @@ fn trim_release_value(value: &str) -> String {
     value.trim().trim_matches('"').to_owned()
 }
 
-pub fn detect_package_manager() -> String {
-    for manager in ["apt-get", "pacman", "dnf"] {
-        if command_exists(manager) {
-            return manager.to_owned();
+/// Detected host package manager. Unknown is a real state, not a sentinel string.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PackageManager {
+    Apt,
+    Pacman,
+    Dnf,
+    #[default]
+    Unknown,
+}
+
+impl PackageManager {
+    pub fn detect() -> Self {
+        if command_exists("apt-get") {
+            Self::Apt
+        } else if command_exists("pacman") {
+            Self::Pacman
+        } else if command_exists("dnf") {
+            Self::Dnf
+        } else {
+            Self::Unknown
         }
     }
-    "unknown".to_owned()
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Apt => "apt-get",
+            Self::Pacman => "pacman",
+            Self::Dnf => "dnf",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl std::fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+pub fn detect_package_manager() -> PackageManager {
+    PackageManager::detect()
 }
 
 pub fn command_exists(name: &str) -> bool {
@@ -203,7 +237,7 @@ impl RemovableApp {
 }
 
 /// Scan apps that are actually installed. Never consults apps_config.csv.
-pub fn scan_removable_apps(package_manager: &str) -> Result<Vec<RemovableApp>, String> {
+pub fn scan_removable_apps(package_manager: PackageManager) -> Result<Vec<RemovableApp>, String> {
     let mut apps = Vec::new();
     if command_exists("flatpak") {
         apps.extend(scan_flatpak_apps()?);
@@ -257,7 +291,7 @@ fn split_flatpak_list_row(line: &str) -> (&str, &str) {
     (line.trim(), "")
 }
 
-fn scan_native_apps(package_manager: &str) -> Result<Vec<RemovableApp>, String> {
+fn scan_native_apps(package_manager: PackageManager) -> Result<Vec<RemovableApp>, String> {
     let packages = user_installed_packages(package_manager)?;
     let exe = env::current_exe().ok();
     let mut apps = Vec::new();
@@ -285,15 +319,15 @@ fn scan_native_apps(package_manager: &str) -> Result<Vec<RemovableApp>, String> 
     Ok(apps)
 }
 
-fn user_installed_packages(package_manager: &str) -> Result<Vec<String>, String> {
+fn user_installed_packages(package_manager: PackageManager) -> Result<Vec<String>, String> {
     match package_manager {
-        "apt-get" | "apt" => parse_package_lines(&command_stdout("apt-mark", &["showmanual"])?),
-        "pacman" => parse_package_lines(&command_stdout("pacman", &["-Qqe"])?),
-        "dnf" => dnf_user_installed_packages(),
-        "unknown" => Ok(Vec::new()),
-        other => Err(format!(
-            "Unsupported package manager for remove scan: {other}"
-        )),
+        PackageManager::Apt => Ok(parse_package_lines(&command_stdout(
+            "apt-mark",
+            &["showmanual"],
+        )?)),
+        PackageManager::Pacman => Ok(parse_package_lines(&command_stdout("pacman", &["-Qqe"])?)),
+        PackageManager::Dnf => dnf_user_installed_packages(),
+        PackageManager::Unknown => Ok(Vec::new()),
     }
 }
 
@@ -302,21 +336,21 @@ fn dnf_user_installed_packages() -> Result<Vec<String>, String> {
         "dnf",
         &["repoquery", "--userinstalled", "--qf", "%{name}\n"],
     ) {
-        let packages = parse_package_lines(&stdout)?;
+        let packages = parse_package_lines(&stdout);
         if !packages.is_empty() || stdout.trim().is_empty() {
             return Ok(packages);
         }
     }
 
     let history = command_stdout("dnf", &["history", "userinstalled"])?;
-    let requested = parse_package_lines(&history)?;
+    let requested = parse_package_lines(&history);
     if requested.is_empty() {
         return Ok(requested);
     }
 
     match command_stdout("rpm", &["-qa", "--qf", "%{NAME}\n"]) {
         Ok(installed) => {
-            let installed = parse_package_lines(&installed)?;
+            let installed = parse_package_lines(&installed);
             Ok(requested
                 .into_iter()
                 .filter(|name| installed.iter().any(|pkg| pkg == name))
@@ -326,17 +360,17 @@ fn dnf_user_installed_packages() -> Result<Vec<String>, String> {
     }
 }
 
-fn parse_package_lines(stdout: &str) -> Result<Vec<String>, String> {
-    Ok(stdout
+fn parse_package_lines(stdout: &str) -> Vec<String> {
+    stdout
         .lines()
         .map(str::trim)
         .filter(|line| is_package_name(line))
         .map(ToOwned::to_owned)
-        .collect())
+        .collect()
 }
 
 fn visible_desktop_for_package(
-    package_manager: &str,
+    package_manager: PackageManager,
     package: &str,
 ) -> Option<(String, Option<String>, Vec<PathBuf>)> {
     let files = package_files(package_manager, package).ok()?;
@@ -359,22 +393,22 @@ fn visible_desktop_for_package(
             .and_then(|stem| stem.to_str())
             .is_some_and(|stem| stem == package);
         if matches_name {
-            chosen = Some((label, parsed.exec, files.clone()));
+            chosen = Some((label, parsed.exec));
             break;
         }
         if chosen.is_none() {
-            chosen = Some((label, parsed.exec, files.clone()));
+            chosen = Some((label, parsed.exec));
         }
     }
-    chosen
+    chosen.map(|(label, exec)| (label, exec, files))
 }
 
-fn package_files(package_manager: &str, package: &str) -> Result<Vec<PathBuf>, String> {
+fn package_files(package_manager: PackageManager, package: &str) -> Result<Vec<PathBuf>, String> {
     let stdout = match package_manager {
-        "apt-get" | "apt" => command_stdout("dpkg", &["-L", package])?,
-        "pacman" => command_stdout("pacman", &["-Ql", package])?,
-        "dnf" => command_stdout("rpm", &["-ql", package])?,
-        _ => return Ok(Vec::new()),
+        PackageManager::Apt => command_stdout("dpkg", &["-L", package])?,
+        PackageManager::Pacman => command_stdout("pacman", &["-Ql", package])?,
+        PackageManager::Dnf => command_stdout("rpm", &["-ql", package])?,
+        PackageManager::Unknown => return Ok(Vec::new()),
     };
     Ok(stdout.lines().filter_map(extract_file_path).collect())
 }
@@ -499,6 +533,19 @@ fn command_stdout(program: &str, args: &[&str]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn package_manager_is_a_closed_set() {
+        assert_eq!(PackageManager::Apt.as_str(), "apt-get");
+        assert_eq!(PackageManager::Pacman.as_str(), "pacman");
+        assert_eq!(PackageManager::Dnf.as_str(), "dnf");
+        assert_eq!(PackageManager::Unknown.as_str(), "unknown");
+        assert_eq!(PackageManager::detect(), detect_package_manager());
+        assert_eq!(
+            format!("{}", PackageManager::Apt),
+            PackageManager::Apt.as_str()
+        );
+    }
 
     #[test]
     fn command_exists_rejects_path_payloads() {

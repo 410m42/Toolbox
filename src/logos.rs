@@ -8,7 +8,7 @@
 use eframe::egui::ColorImage;
 
 /// Distro SVG markup keyed the same way the former header chips looked them up.
-#[allow(dead_code)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub const DISTRO_SVGS: &[(&str, &str)] = &[
     ("arch", include_str!("../assets/distros/arch.svg")),
     ("debian", include_str!("../assets/distros/debian.svg")),
