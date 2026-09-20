@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::validate::{
-    validate_action, validate_category, validate_exec_name, validate_flatpak_id, validate_label,
+    Action, validate_category, validate_exec_name, validate_flatpak_id, validate_label,
     validate_notes, validate_package_name, validate_script_name,
 };
 
@@ -97,8 +97,7 @@ impl AppEntry {
         }
     }
 
-    pub fn try_command(&self, base_dir: &Path, action: &str) -> Result<Vec<String>, String> {
-        validate_action(action).map_err(|error| error.to_string())?;
+    pub fn try_command(&self, base_dir: &Path, action: Action) -> Result<Vec<String>, String> {
         let script = resolve_helper_script(base_dir, "main.sh")?;
 
         let mut command = vec!["bash".to_owned(), script];
@@ -112,14 +111,13 @@ impl AppEntry {
         if !self.exec_name.is_empty() {
             command.extend(["--exec".to_owned(), self.exec_name.clone()]);
         }
-        command.push(action.to_owned());
+        command.push(action.as_str().to_owned());
         Ok(command)
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct AdminTask {
-    #[allow(dead_code)]
     pub category: String,
     pub label: String,
     pub script: String,
@@ -475,7 +473,7 @@ mod tests {
     fn command_uses_argv_array_not_shell_string() {
         let toolbox = temp_toolbox();
         let command = sample_entry()
-            .try_command(&toolbox.path, "install")
+            .try_command(&toolbox.path, Action::Install)
             .unwrap();
         assert_eq!(command[0], "bash");
         assert!(command[1].ends_with("main.sh"));
@@ -500,20 +498,21 @@ mod tests {
         let mut entry = sample_entry();
         entry.package_name.clear();
         entry.flatpak_id = "org.mozilla.firefox".to_owned();
-        let command = entry.try_command(&toolbox.path, "remove").unwrap();
+        let command = entry.try_command(&toolbox.path, Action::Remove).unwrap();
         assert!(!command.contains(&"--package".to_owned()));
         assert!(command.contains(&"--flatpak".to_owned()));
         assert_eq!(command.last().map(String::as_str), Some("remove"));
     }
 
     #[test]
-    fn command_rejects_unknown_action() {
+    fn unknown_action_cannot_be_constructed() {
         let toolbox = temp_toolbox();
         assert!(
             sample_entry()
-                .try_command(&toolbox.path, "upgrade")
-                .is_err()
+                .try_command(&toolbox.path, Action::Install)
+                .is_ok()
         );
+        assert!(crate::validate::validate_action("upgrade").is_err());
     }
 
     #[test]
@@ -621,7 +620,7 @@ mod tests {
         assert_eq!(origin.exec_name, "brave-origin");
         assert_eq!(origin.source_label(), "native");
 
-        let command = origin.try_command(&root, "install").unwrap();
+        let command = origin.try_command(&root, Action::Install).unwrap();
         assert_eq!(command[0], "bash");
         assert!(command[1].ends_with("main.sh"));
         assert!(command.contains(&"--package".to_owned()));
@@ -630,7 +629,7 @@ mod tests {
         assert!(!command.contains(&"--flatpak".to_owned()));
         assert_eq!(command.last().map(String::as_str), Some("install"));
 
-        let remove = origin.try_command(&root, "remove").unwrap();
+        let remove = origin.try_command(&root, Action::Remove).unwrap();
         assert_eq!(remove.last().map(String::as_str), Some("remove"));
         assert!(remove.contains(&"--package".to_owned()));
         assert!(!remove.contains(&"--flatpak".to_owned()));

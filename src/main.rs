@@ -23,11 +23,11 @@ use catalog::{
 };
 use runner::{RunnerMessage, run_tasks, tasks_need_privileges};
 use system::{
-    RemovableApp, RemovableSource, command_output, detect_package_manager, distro_name,
-    env_or_unknown, scan_removable_apps, strip_ansi, uptime_compact, uptime_prose,
+    PackageManager, RemovableApp, RemovableSource, command_output, detect_package_manager,
+    distro_name, env_or_unknown, scan_removable_apps, strip_ansi, uptime_compact, uptime_prose,
 };
 use theme::{Palette, ThemeFamily, ThemeMode};
-use validate::{is_exec_name, is_label, zeroize_string};
+use validate::{Action, is_exec_name, is_label, zeroize_string};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -147,7 +147,7 @@ struct ToolboxApp {
     install_category: Option<String>,
     remove_search: String,
     distro_name: String,
-    package_manager: String,
+    package_manager: PackageManager,
     host: String,
     kernel: String,
     shell: String,
@@ -372,7 +372,7 @@ impl ToolboxApp {
         indices.sort_unstable();
         for index in indices {
             if let Some(entry) = self.apps.get(index) {
-                match entry.try_command(&self.base_dir, "install") {
+                match entry.try_command(&self.base_dir, Action::Install) {
                     Ok(command) => tasks.push(Task {
                         description: format!("Installing {}", entry.label),
                         command,
@@ -501,12 +501,12 @@ impl ToolboxApp {
         self.remove_scan = RemoveScanState::Scanning;
         self.remove_selected.clear();
         self.remove_apps.clear();
-        let package_manager = self.package_manager.clone();
+        let package_manager = self.package_manager;
         let (tx, rx) = mpsc::channel();
         self.remove_scan_rx = Some(rx);
         let repaint = ctx.clone();
         thread::spawn(move || {
-            let result = scan_removable_apps(&package_manager);
+            let result = scan_removable_apps(package_manager);
             let _ = tx.send(result);
             repaint.request_repaint();
         });
@@ -901,13 +901,15 @@ impl ToolboxApp {
         let locked = self.selection_locked();
         if app_card(
             ui,
-            width,
-            selected,
-            &label,
-            Some(source),
-            &notes,
-            icon.as_ref(),
-            &palette,
+            AppCard {
+                width,
+                selected,
+                label: &label,
+                source: Some(source),
+                description: &notes,
+                icon: icon.as_ref(),
+                palette: &palette,
+            },
         )
         .clicked()
             && !locked
@@ -932,13 +934,15 @@ impl ToolboxApp {
         let locked = self.selection_locked();
         if app_card(
             ui,
-            width,
-            selected,
-            &label,
-            Some(source),
-            &detail,
-            icon.as_ref(),
-            &palette,
+            AppCard {
+                width,
+                selected,
+                label: &label,
+                source: Some(source),
+                description: &detail,
+                icon: icon.as_ref(),
+                palette: &palette,
+            },
         )
         .clicked()
             && !locked
@@ -976,7 +980,7 @@ impl ToolboxApp {
             ("OS", self.distro_name.clone()),
             ("Kernel", self.kernel.clone()),
             ("Uptime", uptime_compact()),
-            ("Packages", self.package_manager.clone()),
+            ("Packages", self.package_manager.to_string()),
         ]
     }
 
@@ -988,7 +992,7 @@ impl ToolboxApp {
             ("Uptime", uptime_prose()),
             ("Shell", self.shell.clone()),
             ("DE/WM", self.de_wm.clone()),
-            ("Package Manager", self.package_manager.clone()),
+            ("Package Manager", self.package_manager.to_string()),
             ("App Directory", self.base_dir.display().to_string()),
         ]
     }
@@ -2073,17 +2077,26 @@ fn paint_app_icon(
     );
 }
 
-#[allow(clippy::too_many_arguments)]
-fn app_card(
-    ui: &mut Ui,
+struct AppCard<'a> {
     width: f32,
     selected: bool,
-    label: &str,
-    source: Option<&str>,
-    description: &str,
-    icon: Option<&(TextureHandle, bool)>,
-    palette: &Palette,
-) -> egui::Response {
+    label: &'a str,
+    source: Option<&'a str>,
+    description: &'a str,
+    icon: Option<&'a (TextureHandle, bool)>,
+    palette: &'a Palette,
+}
+
+fn app_card(ui: &mut Ui, card: AppCard<'_>) -> egui::Response {
+    let AppCard {
+        width,
+        selected,
+        label,
+        source,
+        description,
+        icon,
+        palette,
+    } = card;
     let (rect, response) = ui.allocate_exact_size(vec2(width, CARD_HEIGHT), Sense::click());
     paint_card_background(ui.painter(), rect, selected, palette);
 
@@ -2645,7 +2658,7 @@ fn removable_remove_command(
         RemovableSource::Native => entry.package_name = app.detail.clone(),
         RemovableSource::Flatpak => entry.flatpak_id = app.detail.clone(),
     }
-    entry.try_command(base_dir, "remove")
+    entry.try_command(base_dir, Action::Remove)
 }
 
 fn paint_source_pill(painter: &Painter, left_center: Pos2, label: &str, palette: &Palette) {
@@ -2972,7 +2985,7 @@ mod tests {
             install_category: None,
             remove_search: String::new(),
             distro_name: "Debian".to_owned(),
-            package_manager: "apt-get".to_owned(),
+            package_manager: PackageManager::Apt,
             host: "testhost".to_owned(),
             kernel: "6.12.0-test".to_owned(),
             shell: "/bin/bash".to_owned(),

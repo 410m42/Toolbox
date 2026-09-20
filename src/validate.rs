@@ -87,8 +87,46 @@ pub fn is_exec_name(value: &str) -> bool {
     is_package_name(value)
 }
 
+/// Catalog action passed to `main.sh`. Invalid strings cannot construct this type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Action {
+    Install,
+    Remove,
+}
+
+impl Action {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Install => "install",
+            Self::Remove => "remove",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "install" => Some(Self::Install),
+            "remove" => Some(Self::Remove),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Action {
+    type Err = ValidationError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        validate_action(value)
+    }
+}
+
 pub fn is_action(value: &str) -> bool {
-    matches!(value, "install" | "remove")
+    Action::parse(value).is_some()
 }
 
 /// Display identifiers passed through to `main.sh --label`.
@@ -167,12 +205,8 @@ pub fn validate_exec_name(value: &str) -> Result<(), ValidationError> {
     }
 }
 
-pub fn validate_action(value: &str) -> Result<(), ValidationError> {
-    if is_action(value) {
-        Ok(())
-    } else {
-        Err(err("action", "must be install or remove"))
-    }
+pub fn validate_action(value: &str) -> Result<Action, ValidationError> {
+    Action::parse(value).ok_or_else(|| err("action", "must be install or remove"))
 }
 
 pub fn validate_label(value: &str) -> Result<(), ValidationError> {
@@ -253,7 +287,7 @@ pub fn validate_main_sh_argv(args: &[String]) -> Result<(), ValidationError> {
                 validate_exec_name(value)?;
                 exec = true;
             }
-            "install" | "remove" => {
+            value if is_action(value) => {
                 if action {
                     return Err(err("action", "specified more than once"));
                 }
@@ -288,7 +322,7 @@ fn next_flag_value<'a>(
     field: &'static str,
 ) -> Result<&'a str, ValidationError> {
     let value = args.get(*index + 1).map(String::as_str).unwrap_or("");
-    if value.is_empty() || value.starts_with("--") || matches!(value, "install" | "remove") {
+    if value.is_empty() || value.starts_with("--") || is_action(value) {
         return Err(err(field, "is missing"));
     }
     *index += 2;
@@ -422,10 +456,14 @@ mod tests {
 
     #[test]
     fn action_is_install_or_remove_only() {
+        assert_eq!(Action::parse("install"), Some(Action::Install));
+        assert_eq!(Action::parse("remove"), Some(Action::Remove));
+        assert_eq!("install".parse::<Action>().unwrap(), Action::Install);
         assert!(is_action("install"));
         assert!(is_action("remove"));
         assert!(!is_action("update"));
         assert!(!is_action("install; rm -rf /"));
+        assert!(validate_action("upgrade").is_err());
     }
 
     #[test]
