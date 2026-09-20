@@ -1,9 +1,10 @@
 //! Logos compiled into the binary.
 //!
 //! App tiles, distro marks, and the Brave Origin tile use SVG markup via
-//! `include_str!`. Icons are vendored from dashboard-icons (Apache-2.0) or
-//! Simple Icons (CC0). See `assets/logos/NOTICE`. Nothing under `assets/` is
-//! read from disk at runtime.
+//! `include_str!`. Icons are vendored from dashboard-icons (Apache-2.0),
+//! Simple Icons (CC0), Flathub / upstream app icon SVGs, or Flathub PNG
+//! icons wrapped as data-URI SVGs. See `assets/logos/NOTICE`. Nothing under
+//! `assets/` is read from disk at runtime.
 
 use eframe::egui::ColorImage;
 
@@ -19,37 +20,76 @@ pub const DISTRO_SVGS: &[(&str, &str)] = &[
 /// Do not reuse the orange Brave Browser mark.
 pub const BRAVE_ORIGIN_SVG: &str = include_str!("../assets/logos/brave-origin.svg");
 
-/// Colorful dashboard-icons SVGs keyed by dashboardicons slug.
+/// Colorful app-tile SVGs keyed by icon slug.
 pub const APP_SVGS: &[(&str, &str)] = &[
     ("audacity", include_str!("../assets/logos/audacity.svg")),
     ("bitwarden", include_str!("../assets/logos/bitwarden.svg")),
+    ("bottles", include_str!("../assets/logos/bottles.svg")),
+    ("boxes", include_str!("../assets/logos/boxes.svg")),
     ("brave", include_str!("../assets/logos/brave.svg")),
     ("discord", include_str!("../assets/logos/discord.svg")),
+    (
+        "dolphin-emu",
+        include_str!("../assets/logos/dolphin-emu.svg"),
+    ),
+    (
+        "extension-manager",
+        include_str!("../assets/logos/extension-manager.svg"),
+    ),
     ("firefox", include_str!("../assets/logos/firefox.svg")),
+    ("flatseal", include_str!("../assets/logos/flatseal.svg")),
+    ("gear-lever", include_str!("../assets/logos/gear-lever.svg")),
     ("gimp", include_str!("../assets/logos/gimp.svg")),
     (
         "google-chrome",
         include_str!("../assets/logos/google-chrome.svg"),
     ),
+    ("gparted", include_str!("../assets/logos/gparted.svg")),
+    ("heroic", include_str!("../assets/logos/heroic.svg")),
+    ("htop", include_str!("../assets/logos/htop.svg")),
     (
         "libreoffice",
         include_str!("../assets/logos/libreoffice.svg"),
     ),
     ("librewolf", include_str!("../assets/logos/librewolf.svg")),
+    ("localsend", include_str!("../assets/logos/localsend.svg")),
+    ("lutris", include_str!("../assets/logos/lutris.svg")),
     (
         "microsoft-edge",
         include_str!("../assets/logos/microsoft-edge.svg"),
     ),
+    (
+        "mission-center",
+        include_str!("../assets/logos/mission-center.svg"),
+    ),
+    ("mpv", include_str!("../assets/logos/mpv.svg")),
     ("obsidian", include_str!("../assets/logos/obsidian.svg")),
+    ("obs-studio", include_str!("../assets/logos/obs-studio.svg")),
     ("onlyoffice", include_str!("../assets/logos/onlyoffice.svg")),
     ("opera", include_str!("../assets/logos/opera.svg")),
+    ("ppsspp", include_str!("../assets/logos/ppsspp.svg")),
+    (
+        "prism-launcher",
+        include_str!("../assets/logos/prism-launcher.svg"),
+    ),
     ("proton-vpn", include_str!("../assets/logos/proton-vpn.svg")),
+    ("protonplus", include_str!("../assets/logos/protonplus.svg")),
+    (
+        "protonup-qt",
+        include_str!("../assets/logos/protonup-qt.svg"),
+    ),
+    (
+        "pycharm-community",
+        include_str!("../assets/logos/pycharm-community.svg"),
+    ),
     (
         "qbittorrent",
         include_str!("../assets/logos/qbittorrent.svg"),
     ),
+    ("retroarch", include_str!("../assets/logos/retroarch.svg")),
     ("signal", include_str!("../assets/logos/signal.svg")),
     ("slack", include_str!("../assets/logos/slack.svg")),
+    ("sober", include_str!("../assets/logos/sober.svg")),
     ("spotify", include_str!("../assets/logos/spotify.svg")),
     ("steam", include_str!("../assets/logos/steam.svg")),
     ("stremio", include_str!("../assets/logos/stremio.svg")),
@@ -63,6 +103,7 @@ pub const APP_SVGS: &[(&str, &str)] = &[
         include_str!("../assets/logos/visual-studio-code.svg"),
     ),
     ("vivaldi", include_str!("../assets/logos/vivaldi.svg")),
+    ("vlc", include_str!("../assets/logos/vlc.svg")),
     (
         "zen-browser",
         include_str!("../assets/logos/zen-browser.svg"),
@@ -73,19 +114,9 @@ pub const APP_SVGS: &[(&str, &str)] = &[
     ),
 ];
 
-/// Simple Icons monochrome SVGs. Tint with chrome text at paint time.
-pub const MONO_SVGS: &[(&str, &str)] = &[
-    ("heroic", include_str!("../assets/logos/heroic.svg")),
-    ("htop", include_str!("../assets/logos/htop.svg")),
-    ("lutris", include_str!("../assets/logos/lutris.svg")),
-    ("mpv", include_str!("../assets/logos/mpv.svg")),
-    ("obs-studio", include_str!("../assets/logos/obs-studio.svg")),
-    (
-        "pycharm-community",
-        include_str!("../assets/logos/pycharm-community.svg"),
-    ),
-    ("vlc", include_str!("../assets/logos/vlc.svg")),
-];
+/// Formerly Simple Icons monochrome tiles. Kept empty now that Flathub /
+/// brand color icons are vendored into [`APP_SVGS`].
+pub const MONO_SVGS: &[(&str, &str)] = &[];
 
 pub fn is_monochrome_icon(key: &str) -> bool {
     MONO_SVGS.iter().any(|(slug, _)| *slug == key)
@@ -182,8 +213,11 @@ mod tests {
     }
 
     #[test]
-    fn mono_svgs_are_simple_icons_markup() {
-        let keys: Vec<&str> = MONO_SVGS.iter().map(|(key, _)| *key).collect();
+    fn mono_svgs_are_retired_in_favor_of_color_flathub_icons() {
+        assert!(
+            MONO_SVGS.is_empty(),
+            "monochrome Simple Icons tiles were replaced with Flathub color icons"
+        );
         for expected in [
             "vlc",
             "lutris",
@@ -193,13 +227,12 @@ mod tests {
             "htop",
             "pycharm-community",
         ] {
-            assert!(keys.contains(&expected), "{expected}");
+            assert!(
+                APP_SVGS.iter().any(|(key, _)| *key == expected),
+                "{expected} should live in APP_SVGS"
+            );
+            assert!(!is_monochrome_icon(expected), "{expected}");
         }
-        for (name, svg) in MONO_SVGS {
-            assert_markup(name, svg);
-            assert_raster(name, svg);
-        }
-        assert!(is_monochrome_icon("vlc"));
         assert!(!is_monochrome_icon("brave"));
     }
 
@@ -265,36 +298,14 @@ mod tests {
     }
 
     #[test]
-    fn letter_fallback_apps_have_no_invented_icon_files() {
+    fn former_letter_fallback_apps_now_ship_icons() {
         let logos = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/logos");
-        for forbidden in [
-            "bottles.svg",
-            "boxes.svg",
-            "protonup-qt.svg",
-            "gparted.svg",
-            "localsend.svg",
-            "sober.svg",
-            "flatseal.svg",
-            "prism-launcher.svg",
-            "retroarch.svg",
-            "extension-manager.svg",
-            "dolphin-emu.svg",
-            "ppsspp.svg",
-            "gear-lever.svg",
-            "protonplus.svg",
-            "mission-center.svg",
-        ] {
-            assert!(
-                !logos.join(forbidden).exists(),
-                "do not invent a dashboardicons file for {forbidden}"
-            );
-        }
         let keys: Vec<&str> = APP_SVGS
             .iter()
             .chain(MONO_SVGS.iter())
             .map(|(key, _)| *key)
             .collect();
-        for forbidden in [
+        for expected in [
             "bottles",
             "boxes",
             "protonup-qt",
@@ -311,7 +322,11 @@ mod tests {
             "protonplus",
             "mission-center",
         ] {
-            assert!(!keys.contains(&forbidden), "{forbidden}");
+            assert!(keys.contains(&expected), "{expected}");
+            assert!(
+                logos.join(format!("{expected}.svg")).exists(),
+                "{expected}.svg"
+            );
         }
     }
 
@@ -322,6 +337,10 @@ mod tests {
         assert!(notice.contains("dashboard-icons"));
         assert!(notice.contains("Simple Icons"));
         assert!(notice.contains("brave-origin.svg"));
+        assert!(notice.contains("protonplus.svg"));
+        assert!(notice.contains("Flathub"));
+        assert!(notice.contains("localsend.svg"));
+        assert!(notice.contains("bottles.svg"));
     }
 
     #[test]
@@ -332,5 +351,21 @@ mod tests {
         </svg>"##;
         let raster = rasterize_svg_markup(svg, 8).expect("markup with a missing href");
         assert!(raster.rgba.chunks(4).any(|px| px[3] != 0));
+    }
+
+    #[test]
+    fn rasterize_accepts_embedded_png_data_uris() {
+        // 1x1 red PNG
+        let svg = concat!(
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8">"##,
+            r##"<image width="8" height="8" href="data:image/png;base64,"##,
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            r##""/></svg>"##,
+        );
+        let raster = rasterize_svg_markup(svg, 8).expect("png data-uri svg");
+        assert!(
+            raster.rgba.chunks(4).any(|px| px[3] != 0),
+            "embedded PNG should paint opaque pixels"
+        );
     }
 }
