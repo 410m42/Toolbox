@@ -2899,9 +2899,9 @@ fn icon_key(label: &str) -> &'static str {
         "Brave Origin" | "brave-origin" | "brave-origin-bin" => "brave-origin",
         "Discord" | "discord" | "com.discordapp.Discord" => "discord",
         "Dolphin Emulator" | "dolphin-emu" | "org.DolphinEmu.dolphin-emu" => "dolphin-emu",
-        "Extension Manager"
-        | "extension-manager"
-        | "com.mattjakeman.ExtensionManager" => "extension-manager",
+        "Extension Manager" | "extension-manager" | "com.mattjakeman.ExtensionManager" => {
+            "extension-manager"
+        }
         "Firefox" | "firefox" => "firefox",
         "Flatseal" | "flatseal" | "com.github.tchx84.Flatseal" => "flatseal",
         "Gear Lever" | "gearlever" | "gear-lever" | "it.mijorus.gearlever" => "gear-lever",
